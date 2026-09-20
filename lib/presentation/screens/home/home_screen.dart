@@ -31,6 +31,12 @@ class HomeScreen extends StatelessWidget {
               label: const Text('Conversations'),
               onPressed: () => Navigator.of(context).pushNamed(AppRouter.conversations),
             ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.contacts),
+              label: const Text('Contacts'),
+              onPressed: () => Navigator.of(context).pushNamed(AppRouter.contacts),
+            ),
           ],
         ),
       ),
