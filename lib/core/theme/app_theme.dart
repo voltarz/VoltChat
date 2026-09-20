@@ -16,11 +16,9 @@ class AppTheme {
         primary: primaryNeon,
         secondary: primaryNeon,
         surface: surfaceDark,
-        background: backgroundDark,
         onPrimary: Colors.black,
         onSecondary: Colors.black,
         onSurface: textPrimary,
-        onBackground: textPrimary,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: surfaceDark,
