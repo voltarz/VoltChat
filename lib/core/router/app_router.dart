@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/registration_screen.dart';
 import '../../presentation/screens/broadcasts/broadcasts_screen.dart';
+import '../../presentation/screens/contacts/add_contact_screen.dart';
 import '../../presentation/screens/contacts/contact_details_screen.dart';
 import '../../presentation/screens/contacts/contacts_screen.dart';
 import '../../presentation/screens/conversations/chat_screen.dart';
@@ -23,6 +24,7 @@ class AppRouter {
   static const String settings = '/settings';
   static const String contacts = '/contacts';
   static const String contactDetails = '/contact-details';
+  static const String addContact = '/add-contact';
   static const String chat = '/chat';
 
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
@@ -48,6 +50,8 @@ class AppRouter {
       case contactDetails:
         final contactId = routeSettings.arguments as String;
         return MaterialPageRoute(builder: (_) => ContactDetailsScreen(contactId: contactId));
+      case addContact:
+        return MaterialPageRoute(builder: (_) => const AddContactScreen());
       case chat:
         final conversationId = routeSettings.arguments as String;
         return MaterialPageRoute(builder: (_) => ChatScreen(conversationId: conversationId));

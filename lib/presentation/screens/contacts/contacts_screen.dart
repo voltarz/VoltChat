@@ -73,8 +73,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
           IconButton(
             icon: const Icon(Icons.person_add),
             tooltip: 'Add Contact',
-            onPressed: () {
-              // Future: Add contact modal/screen
+            onPressed: () async {
+              final result = await Navigator.of(context).pushNamed(AppRouter.addContact);
+              if (result == true) {
+                _loadContacts();
+              }
             },
           ),
         ],
