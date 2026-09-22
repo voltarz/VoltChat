@@ -2,11 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:voltchat/data/services/mock_messaging_service.dart';
 import 'package:voltchat/data/services/mock_broadcast_service.dart';
-import 'package:voltchat/domain/models/broadcast_list.dart';
 
 void main() {
   group('MockMessagingService Persistence and Delivery Tests', () {
-    setUp(() {
+    setUp(() async {
       SharedPreferences.setMockInitialValues({});
       MockMessagingService().clearStateForTest();
       MockBroadcastService().clearStateForTest();

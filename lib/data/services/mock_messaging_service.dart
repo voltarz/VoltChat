@@ -135,6 +135,13 @@ class MockMessagingService implements MessagingRepository {
         broadcastOriginId: _conversations[index].broadcastOriginId,
         lastUpdatedAt: now,
       );
+    } else {
+      // Create conversation if it doesn't exist
+      _conversations.add(Conversation(
+        id: conversationId,
+        participantId: 'unknown', // Best effort
+        lastUpdatedAt: now,
+      ));
     }
 
     await _saveMessages();

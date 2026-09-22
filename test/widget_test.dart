@@ -13,5 +13,8 @@ void main() {
     expect(find.byType(SplashScreen), findsOneWidget);
     expect(find.text('VoltChat'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    // Clear pending timers from SplashScreen
+    await tester.pumpAndSettle(const Duration(seconds: 3));
   });
 }
