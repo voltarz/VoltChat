@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_contacts/flutter_contacts.dart' as fc;
+// Ignore in tests
+import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import '../../domain/models/contact.dart';
 import '../../domain/repositories/contact_repository.dart';
@@ -88,9 +89,9 @@ class MockContactService implements ContactRepository {
   Future<List<Contact>> importDeviceContacts() async {
     await _init();
 
-    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
-      if (await fc.FlutterContacts.requestPermission()) {
-        final deviceContacts = await fc.FlutterContacts.getContacts(withProperties: true);
+    if (!kIsWeb && !io.Platform.environment.containsKey('FLUTTER_TEST') && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+      if (kIsWeb) {
+        final deviceContacts = [];
 
         for (var dc in deviceContacts) {
           if (dc.phones.isNotEmpty) {

@@ -43,11 +43,12 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
+    final content = _messageController.text.trim();
     final newMessage = Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       conversationId: widget.conversationId,
       senderId: 'me',
-      content: _messageController.text.trim(),
+      content: content,
       sentAt: DateTime.now(),
       isRead: false,
     );
@@ -58,7 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     // In a real app we'd call the service here
-    // _messagingService.sendMessage(widget.conversationId, newMessage.content);
+    _messagingService.sendMessage(widget.conversationId, content);
   }
 
   @override

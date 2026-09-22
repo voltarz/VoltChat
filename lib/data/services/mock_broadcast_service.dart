@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/broadcast.dart';
 import '../../domain/models/broadcast_list.dart';
 import '../../domain/repositories/broadcast_repository.dart';
+import 'mock_messaging_service.dart';
+import 'mock_contact_service.dart';
 
 class MockBroadcastService implements BroadcastRepository {
   MockBroadcastService._privateConstructor();
@@ -157,5 +159,23 @@ class MockBroadcastService implements BroadcastRepository {
 
     _broadcasts.add(broadcast);
     await _saveBroadcasts();
+
+    // Also deliver independently to each individual recipient
+    final messagingService = MockMessagingService();
+    final contactService = MockContactService();
+
+    for (final recipientId in list.recipientIds) {
+      String participantId = recipientId;
+      try {
+        final contact = await contactService.getContactById(recipientId);
+        if (contact.voltChatUserId != null) {
+          participantId = contact.voltChatUserId!;
+        }
+      } catch (e) {
+        // Contact not found, use original recipientId
+      }
+
+      await messagingService.sendMessageToParticipant(participantId, content);
+    }
   }
 }
