@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/registration_screen.dart';
 import '../../presentation/screens/broadcasts/broadcasts_screen.dart';
+import '../../presentation/screens/broadcasts/create_broadcast_list_screen.dart';
+import '../../presentation/screens/broadcasts/broadcast_composer_screen.dart';
+import '../../presentation/screens/broadcasts/broadcast_list_details_screen.dart';
 import '../../presentation/screens/contacts/add_contact_screen.dart';
 import '../../presentation/screens/contacts/contact_details_screen.dart';
 import '../../presentation/screens/contacts/contacts_screen.dart';
@@ -19,6 +22,9 @@ class AppRouter {
   static const String register = '/register';
   static const String home = '/home';
   static const String broadcasts = '/broadcasts';
+  static const String createBroadcastList = '/create-broadcast-list';
+  static const String broadcastComposer = '/broadcast-composer';
+  static const String broadcastListDetails = '/broadcast-list-details';
   static const String conversations = '/conversations';
   static const String profile = '/profile';
   static const String settings = '/settings';
@@ -39,6 +45,14 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       case broadcasts:
         return MaterialPageRoute(builder: (_) => const BroadcastsScreen());
+      case createBroadcastList:
+        return MaterialPageRoute(builder: (_) => const CreateBroadcastListScreen());
+      case broadcastComposer:
+        final listId = routeSettings.arguments as String;
+        return MaterialPageRoute(builder: (_) => BroadcastComposerScreen(listId: listId));
+      case broadcastListDetails:
+        final listId = routeSettings.arguments as String;
+        return MaterialPageRoute(builder: (_) => BroadcastListDetailsScreen(listId: listId));
       case conversations:
         return MaterialPageRoute(builder: (_) => const ConversationsScreen());
       case profile:
