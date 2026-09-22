@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/broadcast.dart';
 import '../../domain/models/broadcast_list.dart';
 import '../../domain/repositories/broadcast_repository.dart';
+import 'mock_messaging_service.dart';
 
 class MockBroadcastService implements BroadcastRepository {
   MockBroadcastService._privateConstructor();
@@ -157,5 +158,11 @@ class MockBroadcastService implements BroadcastRepository {
 
     _broadcasts.add(broadcast);
     await _saveBroadcasts();
+
+    // Also deliver independently to each individual recipient
+    final messagingService = MockMessagingService();
+    for (final recipientId in list.recipientIds) {
+      await messagingService.sendMessageToParticipant(recipientId, content);
+    }
   }
 }
