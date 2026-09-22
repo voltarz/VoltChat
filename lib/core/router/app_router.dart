@@ -36,41 +36,42 @@ class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
       case splash:
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const SplashScreen());
       case login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const LoginScreen());
       case register:
-        return MaterialPageRoute(builder: (_) => const RegistrationScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const RegistrationScreen());
       case home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const HomeScreen());
       case broadcasts:
-        return MaterialPageRoute(builder: (_) => const BroadcastsScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const BroadcastsScreen());
       case createBroadcastList:
-        return MaterialPageRoute(builder: (_) => const CreateBroadcastListScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const CreateBroadcastListScreen());
       case broadcastComposer:
         final listId = routeSettings.arguments as String;
-        return MaterialPageRoute(builder: (_) => BroadcastComposerScreen(listId: listId));
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => BroadcastComposerScreen(listId: listId));
       case broadcastListDetails:
         final listId = routeSettings.arguments as String;
-        return MaterialPageRoute(builder: (_) => BroadcastListDetailsScreen(listId: listId));
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => BroadcastListDetailsScreen(listId: listId));
       case conversations:
-        return MaterialPageRoute(builder: (_) => const ConversationsScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const ConversationsScreen());
       case profile:
-        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const ProfileScreen());
       case settings:
-        return MaterialPageRoute(builder: (_) => const SettingsScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const SettingsScreen());
       case contacts:
-        return MaterialPageRoute(builder: (_) => const ContactsScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const ContactsScreen());
       case contactDetails:
         final contactId = routeSettings.arguments as String;
-        return MaterialPageRoute(builder: (_) => ContactDetailsScreen(contactId: contactId));
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => ContactDetailsScreen(contactId: contactId));
       case addContact:
-        return MaterialPageRoute(builder: (_) => const AddContactScreen());
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => const AddContactScreen());
       case chat:
         final conversationId = routeSettings.arguments as String;
-        return MaterialPageRoute(builder: (_) => ChatScreen(conversationId: conversationId));
+        return MaterialPageRoute(settings: routeSettings, builder: (_) => ChatScreen(conversationId: conversationId));
       default:
         return MaterialPageRoute(
+          settings: routeSettings,
           builder: (_) => Scaffold(
             body: Center(
               child: Text('No route defined for ${routeSettings.name}'),
