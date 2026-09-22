@@ -1,7 +1,16 @@
 import '../models/broadcast.dart';
+import '../models/broadcast_list.dart';
 
 abstract class BroadcastRepository {
-  Future<List<Broadcast>> getRecentBroadcasts();
+  // Broadcast List management
+  Future<List<BroadcastList>> getBroadcastLists();
+  Future<BroadcastList> getBroadcastListById(String id);
+  Future<BroadcastList> createBroadcastList(String name, List<String> recipientIds);
+  Future<BroadcastList> updateBroadcastList(String id, String name, List<String> recipientIds);
+  Future<void> deleteBroadcastList(String id);
+
+  // Broadcast messaging
+  Future<List<Broadcast>> getBroadcastsForList(String listId);
   Future<Broadcast> getBroadcastById(String id);
-  Future<void> sendBroadcast(String content, List<String> recipientIds);
+  Future<void> sendBroadcast(String listId, String content);
 }
