@@ -56,7 +56,7 @@ class ContactDetailsScreen extends StatelessWidget {
                         // Mock: we would normally create or fetch a conversation ID
                         Navigator.of(context).pushNamed(
                           AppRouter.chat,
-                          arguments: 'conv1',
+                          arguments: 'conv_${contact.voltChatUserId ?? contact.id}',
                         );
                       },
                     ),
