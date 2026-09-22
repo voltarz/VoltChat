@@ -46,8 +46,8 @@ class MockMessagingService implements MessagingRepository {
       }
     } else {
       _conversations.addAll([
-        Conversation(id: 'conv1', participantId: 'u1', lastUpdatedAt: DateTime.now().subtract(const Duration(minutes: 5))),
-        Conversation(id: 'conv2', participantId: 'u2', lastUpdatedAt: DateTime.now().subtract(const Duration(hours: 1))),
+        Conversation(id: 'conv_u1', participantId: 'u1', lastUpdatedAt: DateTime.now().subtract(const Duration(minutes: 5))),
+        Conversation(id: 'conv_u2', participantId: 'u2', lastUpdatedAt: DateTime.now().subtract(const Duration(hours: 1))),
       ]);
       await _saveConversations();
     }
@@ -62,12 +62,12 @@ class MockMessagingService implements MessagingRepository {
       });
     } else {
       _messages.addAll({
-        'conv1': [
-          Message(id: 'm1', conversationId: 'conv1', senderId: 'u1', content: 'Hey, are we still on for today?', sentAt: DateTime.now().subtract(const Duration(minutes: 10)), isRead: true),
-          Message(id: 'm2', conversationId: 'conv1', senderId: 'me', content: 'Yes, absolutely!', sentAt: DateTime.now().subtract(const Duration(minutes: 5)), isRead: true),
+        'conv_u1': [
+          Message(id: 'm1', conversationId: 'conv_u1', senderId: 'u1', content: 'Hey, are we still on for today?', sentAt: DateTime.now().subtract(const Duration(minutes: 10)), isRead: true),
+          Message(id: 'm2', conversationId: 'conv_u1', senderId: 'me', content: 'Yes, absolutely!', sentAt: DateTime.now().subtract(const Duration(minutes: 5)), isRead: true),
         ],
-        'conv2': [
-          Message(id: 'm3', conversationId: 'conv2', senderId: 'u2', content: 'Did you get the broadcast?', sentAt: DateTime.now().subtract(const Duration(hours: 1)), isRead: false),
+        'conv_u2': [
+          Message(id: 'm3', conversationId: 'conv_u2', senderId: 'u2', content: 'Did you get the broadcast?', sentAt: DateTime.now().subtract(const Duration(hours: 1)), isRead: false),
         ]
       });
       await _saveMessages();
@@ -153,7 +153,7 @@ class MockMessagingService implements MessagingRepository {
     final index = _conversations.indexWhere((c) => c.participantId == participantId);
     String conversationId;
     if (index == -1) {
-      conversationId = 'conv_${DateTime.now().millisecondsSinceEpoch}_$participantId';
+      conversationId = 'conv_$participantId';
       _conversations.add(Conversation(
         id: conversationId,
         participantId: participantId,

@@ -46,7 +46,7 @@ void main() {
       expect(broadcasts2.any((b) => b.content == 'Hello Broadcast'), isTrue);
     });
 
-    test('Broadcast-to-individual delivery: 1 broadcast -> 3 independent deliveries', () async {
+    test('Broadcast-to-individual delivery: 1 broadcast -> 3 independent deliveries (with persistence)', () async {
       final broadcastService = MockBroadcastService();
       final messagingService = MockMessagingService();
 
@@ -58,6 +58,11 @@ void main() {
       final convB = conversations.firstWhere((c) => c.participantId == 'user_b');
       final convC = conversations.firstWhere((c) => c.participantId == 'user_c');
 
+      // Verify the IDs are what we expect
+      expect(convA.id, 'conv_user_a');
+      expect(convB.id, 'conv_user_b');
+      expect(convC.id, 'conv_user_c');
+
       final messagesA = await messagingService.getMessagesForConversation(convA.id);
       final messagesB = await messagingService.getMessagesForConversation(convB.id);
       final messagesC = await messagingService.getMessagesForConversation(convC.id);
@@ -65,6 +70,20 @@ void main() {
       expect(messagesA.any((m) => m.content == 'Hello 3 Recipients'), isTrue);
       expect(messagesB.any((m) => m.content == 'Hello 3 Recipients'), isTrue);
       expect(messagesC.any((m) => m.content == 'Hello 3 Recipients'), isTrue);
+
+      // Verify persistence through SharedPreferences reload
+      MockMessagingService().clearStateForTest();
+      MockBroadcastService().clearStateForTest();
+
+      final reloadedMessagingService = MockMessagingService();
+
+      final reloadedMessagesA = await reloadedMessagingService.getMessagesForConversation(convA.id);
+      final reloadedMessagesB = await reloadedMessagingService.getMessagesForConversation(convB.id);
+      final reloadedMessagesC = await reloadedMessagingService.getMessagesForConversation(convC.id);
+
+      expect(reloadedMessagesA.any((m) => m.content == 'Hello 3 Recipients'), isTrue);
+      expect(reloadedMessagesB.any((m) => m.content == 'Hello 3 Recipients'), isTrue);
+      expect(reloadedMessagesC.any((m) => m.content == 'Hello 3 Recipients'), isTrue);
     });
 
     test('Privacy: No shared conversation created, messages are isolated', () async {

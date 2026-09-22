@@ -59,15 +59,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
             onPressed: () async {
               setState(() => _isLoading = true);
               final imported = await _contactService.importDeviceContacts();
-              if (mounted) {
-                setState(() {
-                  _contacts = imported;
-                  _isLoading = false;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Contacts imported')),
-                );
-              }
+              if (!context.mounted) return;
+              setState(() {
+                _contacts = imported;
+                _isLoading = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Contacts imported')),
+              );
             },
           ),
           IconButton(
