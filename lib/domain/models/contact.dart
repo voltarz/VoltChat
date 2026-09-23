@@ -3,16 +3,12 @@ class Contact {
   final String displayName;
   final String? phoneNumber;
   final String? profileImageUrl;
-  final bool isVoltChatUser;
-  final String? voltChatUserId;
 
   Contact({
     required this.id,
     required this.displayName,
     this.phoneNumber,
     this.profileImageUrl,
-    this.isVoltChatUser = false,
-    this.voltChatUserId,
   });
 
   Map<String, dynamic> toJson() {
@@ -21,8 +17,6 @@ class Contact {
       'displayName': displayName,
       'phoneNumber': phoneNumber,
       'profileImageUrl': profileImageUrl,
-      'isVoltChatUser': isVoltChatUser,
-      'voltChatUserId': voltChatUserId,
     };
   }
 
@@ -32,8 +26,6 @@ class Contact {
       displayName: json['displayName'],
       phoneNumber: json['phoneNumber'],
       profileImageUrl: json['profileImageUrl'],
-      isVoltChatUser: json['isVoltChatUser'] ?? false,
-      voltChatUserId: json['voltChatUserId'],
     );
   }
 }
