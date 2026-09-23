@@ -92,6 +92,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       : () => Navigator.of(context).pushNamed(AppRouter.register),
                   child: const Text('Create an account'),
                 ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading
+                      ? null
+                      : () => Navigator.of(context).pushNamed(AppRouter.qrLink),
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Link with Phone'),
+                ),
               ],
             ),
           ),

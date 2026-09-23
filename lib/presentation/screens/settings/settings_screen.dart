@@ -22,6 +22,13 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {},
           ),
           ListTile(
+            leading: const Icon(Icons.devices),
+            title: const Text('Linked Devices'),
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRouter.linkedDevices);
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: () async {

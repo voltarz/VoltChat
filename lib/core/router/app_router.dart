@@ -14,6 +14,9 @@ import '../../presentation/screens/conversations/conversations_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
+import '../../presentation/screens/settings/linked_devices_screen.dart';
+import '../../presentation/screens/settings/qr_scanner_screen.dart';
+import '../../presentation/screens/auth/qr_link_screen.dart';
 import '../../presentation/screens/splash/splash_screen.dart';
 
 class AppRouter {
@@ -32,6 +35,9 @@ class AppRouter {
   static const String contactDetails = '/contact-details';
   static const String addContact = '/add-contact';
   static const String chat = '/chat';
+  static const String linkedDevices = '/linked-devices';
+  static const String qrScanner = '/qr-scanner';
+  static const String qrLink = '/qr-link';
 
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -68,7 +74,15 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const AddContactScreen());
       case chat:
         final conversationId = routeSettings.arguments as String;
-        return MaterialPageRoute(builder: (_) => ChatScreen(conversationId: conversationId));
+        return MaterialPageRoute(
+            builder: (_) => ChatScreen(conversationId: conversationId),
+            settings: routeSettings);
+      case linkedDevices:
+        return MaterialPageRoute(builder: (_) => const LinkedDevicesScreen(), settings: routeSettings);
+      case qrScanner:
+        return MaterialPageRoute(builder: (_) => const QrScannerScreen(), settings: routeSettings);
+      case qrLink:
+        return MaterialPageRoute(builder: (_) => const QrLinkScreen(), settings: routeSettings);
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
