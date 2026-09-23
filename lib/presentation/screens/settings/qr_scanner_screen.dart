@@ -56,7 +56,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         final success = await locator.deviceLinkRepository.validateAndPairDevice(
           result,
           'VoltChat Desktop', // In a real app, payload would contain device info or backend lookup
-          'Desktop',
+          'Windows',
         );
 
         if (!mounted) return;
