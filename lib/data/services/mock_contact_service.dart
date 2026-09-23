@@ -31,9 +31,9 @@ class MockContactService implements ContactRepository {
     } else {
       // Add default mock data if empty
       _contacts.addAll([
-        Contact(id: 'c1', displayName: 'Alice Anderson', phoneNumber: '+1234567890', isVoltChatUser: true, voltChatUserId: 'u1'),
-        Contact(id: 'c2', displayName: 'Bob Brown', phoneNumber: '+0987654321', isVoltChatUser: true, voltChatUserId: 'u2'),
-        Contact(id: 'c3', displayName: 'Charlie Davis', phoneNumber: '+1122334455', isVoltChatUser: false),
+        Contact(id: 'c1', displayName: 'Alice Anderson', phoneNumber: '+1234567890'),
+        Contact(id: 'c2', displayName: 'Bob Brown', phoneNumber: '+0987654321'),
+        Contact(id: 'c3', displayName: 'Charlie Davis', phoneNumber: '+1122334455'),
       ]);
       await _saveContacts();
     }

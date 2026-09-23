@@ -5,6 +5,7 @@ import '../../domain/models/broadcast_list.dart';
 import '../../domain/repositories/broadcast_repository.dart';
 import 'mock_messaging_service.dart';
 import 'mock_contact_service.dart';
+import 'mock_user_service.dart';
 
 class MockBroadcastService implements BroadcastRepository {
   MockBroadcastService._privateConstructor();
@@ -163,13 +164,17 @@ class MockBroadcastService implements BroadcastRepository {
     // Also deliver independently to each individual recipient
     final messagingService = MockMessagingService();
     final contactService = MockContactService();
+    final userService = MockUserService();
 
     for (final recipientId in list.recipientIds) {
       String participantId = recipientId;
       try {
         final contact = await contactService.getContactById(recipientId);
-        if (contact.voltChatUserId != null) {
-          participantId = contact.voltChatUserId!;
+        if (contact.phoneNumber != null && contact.phoneNumber!.isNotEmpty) {
+          final user = await userService.getUserByPhoneNumber(contact.phoneNumber!);
+          if (user != null) {
+            participantId = user.id;
+          }
         }
       } catch (e) {
         // Contact not found, use original recipientId

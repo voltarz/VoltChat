@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/router/app_router.dart';
 import '../../../domain/models/contact.dart';
 import '../../../data/services/mock_contact_service.dart';
+import '../../../data/services/mock_user_service.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -12,7 +13,9 @@ class ContactsScreen extends StatefulWidget {
 
 class _ContactsScreenState extends State<ContactsScreen> {
   final MockContactService _contactService = MockContactService();
+  final MockUserService _userService = MockUserService();
   List<Contact> _contacts = [];
+  Map<String, bool> _registrationStatus = {};
   bool _isLoading = true;
 
   @override
@@ -24,6 +27,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Future<void> _loadContacts() async {
     setState(() => _isLoading = true);
     final contacts = await _contactService.getContacts();
+    await _checkRegistrationStatuses(contacts);
     if (mounted) {
       setState(() {
         _contacts = contacts;
@@ -39,10 +43,28 @@ class _ContactsScreenState extends State<ContactsScreen> {
     }
     setState(() => _isLoading = true);
     final results = await _contactService.searchContacts(query);
+    await _checkRegistrationStatuses(results);
     if (mounted) {
       setState(() {
         _contacts = results;
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkRegistrationStatuses(List<Contact> contacts) async {
+    final statusMap = <String, bool>{};
+    for (final contact in contacts) {
+      if (contact.phoneNumber != null && contact.phoneNumber!.isNotEmpty) {
+        final user = await _userService.getUserByPhoneNumber(contact.phoneNumber!);
+        statusMap[contact.id] = user != null;
+      } else {
+        statusMap[contact.id] = false;
+      }
+    }
+    if (mounted) {
+      setState(() {
+         _registrationStatus = statusMap;
       });
     }
   }
@@ -100,13 +122,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
                     itemCount: _contacts.length,
                     itemBuilder: (context, index) {
                       final contact = _contacts[index];
+                      final isUser = _registrationStatus[contact.id] ?? false;
                       return ListTile(
                         leading: CircleAvatar(
                           child: Text(contact.displayName[0].toUpperCase()),
                         ),
                         title: Text(contact.displayName),
                         subtitle: Text(contact.phoneNumber ?? ''),
-                        trailing: contact.isVoltChatUser
+                        trailing: isUser
                             ? const Icon(Icons.bolt, color: Colors.blue)
                             : null,
                         onTap: () {
