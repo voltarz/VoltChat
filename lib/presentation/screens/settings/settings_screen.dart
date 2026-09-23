@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/di/locator.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -23,7 +24,9 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
-            onTap: () {
+            onTap: () async {
+              await locator.authRepository.logout();
+              if (!context.mounted) return;
               Navigator.of(context).pushNamedAndRemoveUntil(
                 AppRouter.login,
                 (route) => false,

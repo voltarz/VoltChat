@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/di/locator.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,11 +14,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(AppRouter.login);
-      }
-    });
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    final hasValidSession = await locator.authRepository.hasValidSession();
+    if (!mounted) return;
+
+    if (hasValidSession) {
+      Navigator.of(context).pushReplacementNamed(AppRouter.home);
+    } else {
+      Navigator.of(context).pushReplacementNamed(AppRouter.login);
+    }
   }
 
   @override
