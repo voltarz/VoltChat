@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/di/locator.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  locator.setup();
   runApp(const VoltChatApp());
 }
 
