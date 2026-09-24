@@ -7,7 +7,7 @@ enum MessageType {
 }
 
 MessageType messageTypeFromString(String? typeStr) {
-  if (typeStr == null) return MessageType.text;
+  if (typeStr == null || typeStr.isEmpty) return MessageType.text;
   switch (typeStr) {
     case 'image':
       return MessageType.image;

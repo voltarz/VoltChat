@@ -177,30 +177,27 @@ class MockBroadcastService implements BroadcastRepository {
     final userService = MockUserService();
 
     for (final recipientId in list.recipientIds) {
-      String participantId = recipientId;
       try {
         final contact = await contactService.getContactById(recipientId);
         if (contact.phoneNumber != null && contact.phoneNumber!.isNotEmpty) {
           final user = await userService.getUserByPhoneNumber(contact.phoneNumber!);
           if (user != null) {
-            participantId = user.id;
+            await messagingService.sendMessageToParticipant(
+              user.id,
+              content,
+              messageType: messageType,
+              localPath: localPath,
+              fileName: fileName,
+              mimeType: mimeType,
+              fileSize: fileSize,
+              duration: duration,
+              sentAt: sentAt, // CRITICAL: Maintain exact sync timestamp
+            );
           }
         }
       } catch (e) {
-        // Fallback to original recipientId
+        // Skip recipient if not found
       }
-
-      await messagingService.sendMessageToParticipant(
-        participantId,
-        content,
-        messageType: messageType,
-        localPath: localPath,
-        fileName: fileName,
-        mimeType: mimeType,
-        fileSize: fileSize,
-        duration: duration,
-        sentAt: sentAt, // CRITICAL: Maintain exact sync timestamp
-      );
     }
   }
 }
