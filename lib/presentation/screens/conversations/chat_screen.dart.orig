@@ -15,6 +15,7 @@ import '../../widgets/messages/image_message_bubble.dart';
 import '../../widgets/messages/video_message_bubble.dart';
 import '../../widgets/messages/file_message_bubble.dart';
 import '../../widgets/messages/voice_message_bubble.dart';
+import 'package:video_player/video_player.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -271,7 +272,7 @@ class _ChatScreenState extends State<ChatScreen> {
           bool send = false;
           final duration = DateTime.now().difference(_recordingStartTime!).inSeconds;
 
-          if (!mounted) return;
+          if (!context.mounted) return;
           await showDialog(
             context: context,
             builder: (context) {
@@ -317,7 +318,7 @@ class _ChatScreenState extends State<ChatScreen> {
       // Start recording
       final status = await Permission.microphone.request();
       if (status != PermissionStatus.granted) {
-        if (!mounted) return;
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Microphone permission required.'),
@@ -418,6 +419,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         case MessageType.audio:
                           messageWidget = VoiceMessageBubble(message: message, isMe: isMe);
                           break;
+                        case MessageType.text:
                         default:
                           messageWidget = TextMessageBubble(message: message, isMe: isMe);
                           break;

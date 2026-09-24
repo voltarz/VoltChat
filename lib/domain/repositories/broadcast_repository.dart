@@ -12,5 +12,14 @@ abstract class BroadcastRepository {
   // Broadcast messaging
   Future<List<Broadcast>> getBroadcastsForList(String listId);
   Future<Broadcast> getBroadcastById(String id);
-  Future<void> sendBroadcast(String listId, String content);
+  Future<void> sendBroadcast(
+    String listId,
+    String content, {
+    String messageType = 'text',
+    String? localPath,
+    String? fileName,
+    String? mimeType,
+    int? fileSize,
+    int? duration,
+  });
 }

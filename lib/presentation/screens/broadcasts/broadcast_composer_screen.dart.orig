@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../../domain/models/message.dart';
+import '../../../core/router/app_router.dart';
+import '../../../data/services/mock_broadcast_service.dart';
+import '../../../domain/models/broadcast.dart';
+import '../../../domain/models/broadcast_list.dart';
 import '../../../domain/models/message_type.dart';
-import '../../../data/services/mock_messaging_service.dart';
-import '../../../domain/models/contact.dart';
-import '../../../data/services/mock_contact_service.dart';
+import '../../../domain/models/message.dart'; // Needed to convert Broadcast to Message for bubbles
 import '../../../data/services/local_media_storage_service.dart';
 import '../../../core/utils/attachment_picker.dart';
 import '../../widgets/messages/text_message_bubble.dart';
@@ -15,24 +16,25 @@ import '../../widgets/messages/image_message_bubble.dart';
 import '../../widgets/messages/video_message_bubble.dart';
 import '../../widgets/messages/file_message_bubble.dart';
 import '../../widgets/messages/voice_message_bubble.dart';
+import 'package:video_player/video_player.dart';
 
-class ChatScreen extends StatefulWidget {
-  final String conversationId;
+class BroadcastComposerScreen extends StatefulWidget {
+  final String listId;
 
-  const ChatScreen({super.key, required this.conversationId});
+  const BroadcastComposerScreen({super.key, required this.listId});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<BroadcastComposerScreen> createState() => _BroadcastComposerScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  final MockMessagingService _messagingService = MockMessagingService();
-  final MockContactService _contactService = MockContactService();
-  final LocalMediaStorageService _mediaStorage = LocalMediaStorageService();
-  final TextEditingController _messageController = TextEditingController();
-  List<Message> _messages = [];
+class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
+  final _broadcastService = MockBroadcastService();
+  final _mediaStorage = LocalMediaStorageService();
+  final _messageController = TextEditingController();
+
+  BroadcastList? _list;
+  List<Broadcast> _messages = [];
   bool _isLoading = true;
-  Contact? _contact;
 
   // Voice recording state
   final AudioRecorder _audioRecorder = AudioRecorder();
@@ -43,39 +45,30 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _loadContact();
-    _loadMessages();
+    _loadData();
   }
 
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _audioRecorder.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadContact() async {
-    final id = widget.conversationId.startsWith('conv_')
-        ? widget.conversationId.substring(5)
-        : widget.conversationId;
-    final contact = await _contactService.getContactById(id);
-    if (mounted) {
-      setState(() => _contact = contact);
-    }
-  }
-
-  Future<void> _loadMessages() async {
-    final messages = await _messagingService.getMessagesForConversation(widget.conversationId);
-    if (mounted) {
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final list = await _broadcastService.getBroadcastListById(widget.listId);
+      final messages = await _broadcastService.getBroadcastsForList(widget.listId);
+      if (!mounted) return;
       setState(() {
-        _messages = messages.toList();
-        _messages.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+        _list = list;
+        _messages = messages;
         _isLoading = false;
       });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading broadcast data: $e')),
+      );
     }
   }
 
-  void _sendMessage({
+  Future<void> _sendMessage({
     String? contentOverride,
     MessageType messageType = MessageType.text,
     String? localPath,
@@ -83,40 +76,30 @@ class _ChatScreenState extends State<ChatScreen> {
     String? mimeType,
     int? fileSize,
     int? duration,
-  }) {
+  }) async {
     final content = contentOverride ?? _messageController.text.trim();
     if (content.isEmpty && localPath == null) return;
 
-    final newMessage = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: widget.conversationId,
-      senderId: 'me',
-      content: content,
-      sentAt: DateTime.now(),
-      isRead: false,
-      messageType: messageType,
-      localPath: localPath,
-      fileName: fileName,
-      mimeType: mimeType,
-      fileSize: fileSize,
-      duration: duration,
-    );
-
-    setState(() {
-      _messages.insert(0, newMessage);
+    try {
+      await _broadcastService.sendBroadcast(
+        widget.listId,
+        content,
+        messageType: messageTypeToString(messageType),
+        localPath: localPath,
+        fileName: fileName,
+        mimeType: mimeType,
+        fileSize: fileSize,
+        duration: duration,
+      );
       _messageController.clear();
-    });
-
-    _messagingService.sendMessage(
-      widget.conversationId,
-      content,
-      messageType: messageTypeToString(messageType),
-      localPath: localPath,
-      fileName: fileName,
-      mimeType: mimeType,
-      fileSize: fileSize,
-      duration: duration,
-    );
+      await _loadData(); // Reload messages
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending broadcast: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _showMediaPreview(AttachmentResult result) async {
@@ -142,7 +125,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                 const SizedBox(height: 16),
-                const Text('Do you want to send this attachment?'),
+                const Text('Do you want to send this broadcast attachment?'),
               ],
             ),
           ),
@@ -249,7 +232,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (result.type == 'file') type = MessageType.file;
 
     _sendMessage(
-      contentOverride: '', // Or prompt user for caption
+      contentOverride: '',
       messageType: type,
       localPath: savedPath,
       fileName: result.originalName,
@@ -271,13 +254,13 @@ class _ChatScreenState extends State<ChatScreen> {
           bool send = false;
           final duration = DateTime.now().difference(_recordingStartTime!).inSeconds;
 
-          if (!mounted) return;
+          if (!context.mounted) return;
           await showDialog(
             context: context,
             builder: (context) {
               return AlertDialog(
                 title: const Text('Review Voice Note'),
-                content: Text('Voice note recorded (${duration}s). Send it?'),
+                content: Text('Broadcast voice note recorded (${duration}s). Send it?'),
                 actions: [
                   TextButton(
                     onPressed: () {
@@ -299,7 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
           );
 
           if (send) {
-            final savedPath = await _mediaStorage.saveMediaFile(file, 'voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a');
+            final savedPath = await _mediaStorage.saveMediaFile(file, 'voice_broadcast_${DateTime.now().millisecondsSinceEpoch}.m4a');
             final size = await file.length();
 
             _sendMessage(
@@ -317,7 +300,7 @@ class _ChatScreenState extends State<ChatScreen> {
       // Start recording
       final status = await Permission.microphone.request();
       if (status != PermissionStatus.granted) {
-        if (!mounted) return;
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Microphone permission required.'),
@@ -329,7 +312,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (await _audioRecorder.hasPermission()) {
         final appDir = await getApplicationDocumentsDirectory();
-        final path = '${appDir.path}/temp_voice_note.m4a';
+        final path = '${appDir.path}/temp_voice_broadcast.m4a';
 
         await _audioRecorder.start(
           const RecordConfig(encoder: AudioEncoder.aacLc),
@@ -361,96 +344,93 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
+  void dispose() {
+    _messageController.dispose();
+    _audioRecorder.dispose();
+    super.dispose();
+  }
+
+  Message _convertBroadcastToMessage(Broadcast b) {
+    return Message(
+      id: b.id,
+      conversationId: b.listId, // Not technically correct, but works for the bubble UI
+      senderId: 'me',
+      content: b.content,
+      sentAt: b.sentAt,
+      isRead: true,
+      messageType: b.messageType,
+      localPath: b.localPath,
+      fileName: b.fileName,
+      mimeType: b.mimeType,
+      fileSize: b.fileSize,
+      duration: b.duration,
+      thumbnailPath: b.thumbnailPath,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_list == null) {
+      return const Scaffold(body: Center(child: Text('List not found')));
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.grey[800],
-              child: Text(
-                _contact?.displayName.substring(0, 1).toUpperCase() ?? 'U',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+        title: GestureDetector(
+          onTap: () {
+            Navigator.of(context).pushNamed(
+              AppRouter.broadcastListDetails,
+              arguments: widget.listId,
+            ).then((_) => _loadData()); // Reload in case list details were modified
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_list!.name),
+              Text(
+                '${_list!.recipientIds.length} recipients',
+                style: const TextStyle(fontSize: 12),
               ),
-            ),
-            const SizedBox(width: 12),
-            Text(_contact?.displayName ?? 'User'),
-          ],
+            ],
+          ),
         ),
       ),
       body: Column(
         children: [
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    reverse: true,
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      final isMe = message.senderId == 'me';
+            child: ListView.builder(
+              reverse: true, // Show newest at the bottom
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final broadcast = _messages[index];
+                final message = _convertBroadcastToMessage(broadcast);
 
-                      // Date separator logic
-                      bool showDateSeparator = false;
-                      if (index == _messages.length - 1) {
-                        showDateSeparator = true;
-                      } else {
-                        final previousMessage = _messages[index + 1];
-                        if (message.sentAt.year != previousMessage.sentAt.year ||
-                            message.sentAt.month != previousMessage.sentAt.month ||
-                            message.sentAt.day != previousMessage.sentAt.day) {
-                          showDateSeparator = true;
-                        }
-                      }
+                Widget messageWidget;
+                switch (message.messageType) {
+                  case MessageType.image:
+                    messageWidget = ImageMessageBubble(message: message, isMe: true);
+                    break;
+                  case MessageType.video:
+                    messageWidget = VideoMessageBubble(message: message, isMe: true);
+                    break;
+                  case MessageType.file:
+                    messageWidget = FileMessageBubble(message: message, isMe: true);
+                    break;
+                  case MessageType.audio:
+                    messageWidget = VoiceMessageBubble(message: message, isMe: true);
+                    break;
+                  default:
+                    messageWidget = TextMessageBubble(message: message, isMe: true);
+                    break;
+                }
 
-                      Widget messageWidget;
-                      switch (message.messageType) {
-                        case MessageType.image:
-                          messageWidget = ImageMessageBubble(message: message, isMe: isMe);
-                          break;
-                        case MessageType.video:
-                          messageWidget = VideoMessageBubble(message: message, isMe: isMe);
-                          break;
-                        case MessageType.file:
-                          messageWidget = FileMessageBubble(message: message, isMe: isMe);
-                          break;
-                        case MessageType.audio:
-                          messageWidget = VoiceMessageBubble(message: message, isMe: isMe);
-                          break;
-                        default:
-                          messageWidget = TextMessageBubble(message: message, isMe: isMe);
-                          break;
-                      }
-
-                      if (showDateSeparator) {
-                        return Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16.0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[900],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _formatDate(message.sentAt),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            messageWidget,
-                          ],
-                        );
-                      }
-
-                      return messageWidget;
-                    },
-                  ),
+                return messageWidget;
+              },
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -460,12 +440,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
+                      decoration: const InputDecoration(
+                        hintText: 'Type a broadcast message...',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.all(Radius.circular(24.0)),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                       ),
                     ),
                   ),
@@ -489,16 +469,16 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(width: 8),
+                const SizedBox(width: 8.0),
                 GestureDetector(
                   onLongPress: _isRecordingVoice ? null : _toggleVoiceRecord,
                   onLongPressUp: _isRecordingVoice ? _toggleVoiceRecord : null,
                   child: CircleAvatar(
-                    backgroundColor: _isRecordingVoice ? Colors.red : Theme.of(context).primaryColor,
+                    backgroundColor: _isRecordingVoice ? Colors.red : Theme.of(context).colorScheme.primaryContainer,
                     child: IconButton(
                       icon: Icon(
                         _isRecordingVoice ? Icons.stop : Icons.send,
-                        color: _isRecordingVoice ? Colors.white : Colors.black
+                        color: _isRecordingVoice ? Colors.white : Theme.of(context).colorScheme.primary,
                       ),
                       onPressed: () {
                         if (_isRecordingVoice) {
@@ -516,18 +496,5 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0 && now.day == date.day) {
-      return 'Today';
-    } else if (difference.inDays == 1 || (difference.inDays == 0 && now.day != date.day)) {
-      return 'Yesterday';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
   }
 }
