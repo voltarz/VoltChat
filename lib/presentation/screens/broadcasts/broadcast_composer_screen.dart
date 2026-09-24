@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/services/mock_broadcast_service.dart';
 import '../../../domain/models/broadcast.dart';
 import '../../../domain/models/broadcast_list.dart';
+import '../../../domain/models/message_type.dart';
+import '../../../domain/models/message.dart'; // Needed to convert Broadcast to Message for bubbles
+import '../../../data/services/local_media_storage_service.dart';
+import '../../../core/utils/attachment_picker.dart';
+import '../../widgets/messages/text_message_bubble.dart';
+import '../../widgets/messages/image_message_bubble.dart';
+import '../../widgets/messages/video_message_bubble.dart';
+import '../../widgets/messages/file_message_bubble.dart';
+import '../../widgets/messages/voice_message_bubble.dart';
 
 class BroadcastComposerScreen extends StatefulWidget {
   final String listId;
@@ -15,11 +28,18 @@ class BroadcastComposerScreen extends StatefulWidget {
 
 class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
   final _broadcastService = MockBroadcastService();
+  final _mediaStorage = LocalMediaStorageService();
   final _messageController = TextEditingController();
 
   BroadcastList? _list;
   List<Broadcast> _messages = [];
   bool _isLoading = true;
+
+  // Voice recording state
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _isRecordingVoice = false;
+  DateTime? _recordingStartTime;
+  String _recordingDuration = "0:00";
 
   @override
   void initState() {
@@ -47,12 +67,29 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
     }
   }
 
-  Future<void> _sendMessage() async {
-    final content = _messageController.text.trim();
-    if (content.isEmpty) return;
+  Future<void> _sendMessage({
+    String? contentOverride,
+    MessageType messageType = MessageType.text,
+    String? localPath,
+    String? fileName,
+    String? mimeType,
+    int? fileSize,
+    int? duration,
+  }) async {
+    final content = contentOverride ?? _messageController.text.trim();
+    if (content.isEmpty && localPath == null) return;
 
     try {
-      await _broadcastService.sendBroadcast(widget.listId, content);
+      await _broadcastService.sendBroadcast(
+        widget.listId,
+        content,
+        messageType: messageTypeToString(messageType),
+        localPath: localPath,
+        fileName: fileName,
+        mimeType: mimeType,
+        fileSize: fileSize,
+        duration: duration,
+      );
       _messageController.clear();
       await _loadData(); // Reload messages
     } catch (e) {
@@ -64,10 +101,270 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
     }
   }
 
+  Future<void> _showMediaPreview(AttachmentResult result) async {
+    bool send = false;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Preview Media'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (result.type == 'image')
+                  Image.file(result.file, height: 200)
+                else if (result.type == 'video')
+                  const Icon(Icons.videocam, size: 100)
+                else if (result.type == 'file')
+                  Column(
+                    children: [
+                      const Icon(Icons.insert_drive_file, size: 50),
+                      Text(result.originalName),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+                const Text('Do you want to send this broadcast attachment?'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                send = true;
+                Navigator.pop(context);
+              },
+              child: const Text('Send'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (send) {
+      await _processAttachment(result);
+    }
+  }
+
+  Future<void> _handleAttachmentSelection() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await AttachmentPicker.takePhoto();
+                  if (result != null) _showMediaPreview(result);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam),
+                title: const Text('Record Video'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await AttachmentPicker.recordVideo();
+                  if (result != null) _showMediaPreview(result);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text('Gallery (Image/Video)'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  showDialog(context: context, builder: (context) => AlertDialog(
+                    title: const Text('Select Media'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: const Text('Image'),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final result = await AttachmentPicker.pickImageFromGallery();
+                            if (result != null) _showMediaPreview(result);
+                          }
+                        ),
+                        ListTile(
+                          title: const Text('Video'),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final result = await AttachmentPicker.pickVideoFromGallery();
+                            if (result != null) _showMediaPreview(result);
+                          }
+                        )
+                      ]
+                    )
+                  ));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.insert_drive_file),
+                title: const Text('Document / File'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await AttachmentPicker.pickFile();
+                  if (result != null) _showMediaPreview(result);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _processAttachment(AttachmentResult result) async {
+    final savedPath = await _mediaStorage.saveMediaFile(result.file, result.originalName);
+
+    MessageType type = MessageType.text;
+    if (result.type == 'image') type = MessageType.image;
+    if (result.type == 'video') type = MessageType.video;
+    if (result.type == 'file') type = MessageType.file;
+
+    _sendMessage(
+      contentOverride: '',
+      messageType: type,
+      localPath: savedPath,
+      fileName: result.originalName,
+      fileSize: result.size,
+    );
+  }
+
+  Future<void> _toggleVoiceRecord() async {
+    if (_isRecordingVoice) {
+      // Stop recording
+      final path = await _audioRecorder.stop();
+      setState(() {
+        _isRecordingVoice = false;
+      });
+
+      if (path != null) {
+        final file = File(path);
+        if (await file.exists()) {
+          bool send = false;
+          final duration = DateTime.now().difference(_recordingStartTime!).inSeconds;
+
+          if (!mounted) return;
+          await showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('Review Voice Note'),
+                content: Text('Broadcast voice note recorded (${duration}s). Send it?'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      file.delete();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Discard'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      send = true;
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Send'),
+                  ),
+                ],
+              );
+            },
+          );
+
+          if (send) {
+            final savedPath = await _mediaStorage.saveMediaFile(file, 'voice_broadcast_${DateTime.now().millisecondsSinceEpoch}.m4a');
+            final size = await file.length();
+
+            _sendMessage(
+              contentOverride: '',
+              messageType: MessageType.audio,
+              localPath: savedPath,
+              fileName: 'Voice Note',
+              fileSize: size,
+              duration: duration,
+            );
+          }
+        }
+      }
+    } else {
+      // Start recording
+      final status = await Permission.microphone.request();
+      if (status != PermissionStatus.granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Microphone permission required.'),
+            action: SnackBarAction(label: 'Settings', onPressed: () => openAppSettings()),
+          )
+        );
+        return;
+      }
+
+      if (await _audioRecorder.hasPermission()) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final path = '${appDir.path}/temp_voice_broadcast.m4a';
+
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: path
+        );
+
+        setState(() {
+          _isRecordingVoice = true;
+          _recordingStartTime = DateTime.now();
+        });
+
+        _updateRecordingDuration();
+      }
+    }
+  }
+
+  void _updateRecordingDuration() async {
+    while (_isRecordingVoice && mounted) {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!_isRecordingVoice || !mounted) break;
+
+      final diff = DateTime.now().difference(_recordingStartTime!);
+      final m = diff.inMinutes;
+      final s = diff.inSeconds % 60;
+      setState(() {
+        _recordingDuration = "$m:${s.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
+    _audioRecorder.dispose();
     super.dispose();
+  }
+
+  Message _convertBroadcastToMessage(Broadcast b) {
+    return Message(
+      id: b.id,
+      conversationId: b.listId, // Not technically correct, but works for the bubble UI
+      senderId: 'me',
+      content: b.content,
+      sentAt: b.sentAt,
+      isRead: true,
+      messageType: b.messageType,
+      localPath: b.localPath,
+      fileName: b.fileName,
+      mimeType: b.mimeType,
+      fileSize: b.fileSize,
+      duration: b.duration,
+      thumbnailPath: b.thumbnailPath,
+    );
   }
 
   @override
@@ -108,32 +405,29 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
               reverse: true, // Show newest at the bottom
               itemCount: _messages.length,
               itemBuilder: (context, index) {
-                final message = _messages[index];
-                return Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16.0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(message.content),
-                        const SizedBox(height: 4.0),
-                        Text(
-                          '${message.sentAt.hour}:${message.sentAt.minute.toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer.withAlpha(153), // 0.6 * 255 ≈ 153
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                final broadcast = _messages[index];
+                final message = _convertBroadcastToMessage(broadcast);
+
+                Widget messageWidget;
+                switch (message.messageType) {
+                  case MessageType.image:
+                    messageWidget = ImageMessageBubble(message: message, isMe: true);
+                    break;
+                  case MessageType.video:
+                    messageWidget = VideoMessageBubble(message: message, isMe: true);
+                    break;
+                  case MessageType.file:
+                    messageWidget = FileMessageBubble(message: message, isMe: true);
+                    break;
+                  case MessageType.audio:
+                    messageWidget = VoiceMessageBubble(message: message, isMe: true);
+                    break;
+                  default:
+                    messageWidget = TextMessageBubble(message: message, isMe: true);
+                    break;
+                }
+
+                return messageWidget;
               },
             ),
           ),
@@ -141,23 +435,59 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a broadcast message...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(24.0)),
+                if (!_isRecordingVoice) ...[
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a broadcast message...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(24.0)),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                       ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                     ),
                   ),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.attach_file),
+                    onPressed: _handleAttachmentSelection,
+                  ),
+                ] else ...[
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Icon(Icons.mic, color: Colors.red),
+                        ),
+                        Text(
+                          "Recording... $_recordingDuration",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8.0),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  color: Theme.of(context).colorScheme.primary,
-                  onPressed: _sendMessage,
+                GestureDetector(
+                  onLongPress: _isRecordingVoice ? null : _toggleVoiceRecord,
+                  onLongPressUp: _isRecordingVoice ? _toggleVoiceRecord : null,
+                  child: CircleAvatar(
+                    backgroundColor: _isRecordingVoice ? Colors.red : Theme.of(context).colorScheme.primaryContainer,
+                    child: IconButton(
+                      icon: Icon(
+                        _isRecordingVoice ? Icons.stop : Icons.send,
+                        color: _isRecordingVoice ? Colors.white : Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        if (_isRecordingVoice) {
+                          _toggleVoiceRecord();
+                        } else {
+                          _sendMessage();
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),

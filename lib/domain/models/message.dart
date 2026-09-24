@@ -1,3 +1,5 @@
+import 'message_type.dart';
+
 class Message {
   final String id;
   final String conversationId;
@@ -5,6 +7,15 @@ class Message {
   final String content;
   final DateTime sentAt;
   final bool isRead;
+  final MessageType messageType;
+
+  // Media attachment fields
+  final String? localPath;
+  final String? fileName;
+  final String? mimeType;
+  final int? fileSize;
+  final int? duration;
+  final String? thumbnailPath;
 
   Message({
     required this.id,
@@ -13,6 +24,13 @@ class Message {
     required this.content,
     required this.sentAt,
     this.isRead = false,
+    this.messageType = MessageType.text,
+    this.localPath,
+    this.fileName,
+    this.mimeType,
+    this.fileSize,
+    this.duration,
+    this.thumbnailPath,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,6 +41,13 @@ class Message {
       'content': content,
       'sentAt': sentAt.toIso8601String(),
       'isRead': isRead,
+      'messageType': messageTypeToString(messageType),
+      if (localPath != null) 'localPath': localPath,
+      if (fileName != null) 'fileName': fileName,
+      if (mimeType != null) 'mimeType': mimeType,
+      if (fileSize != null) 'fileSize': fileSize,
+      if (duration != null) 'duration': duration,
+      if (thumbnailPath != null) 'thumbnailPath': thumbnailPath,
     };
   }
 
@@ -34,6 +59,13 @@ class Message {
       content: json['content'],
       sentAt: DateTime.parse(json['sentAt']),
       isRead: json['isRead'] ?? false,
+      messageType: messageTypeFromString(json['messageType'] as String?),
+      localPath: json['localPath'] as String?,
+      fileName: json['fileName'] as String?,
+      mimeType: json['mimeType'] as String?,
+      fileSize: json['fileSize'] as int?,
+      duration: json['duration'] as int?,
+      thumbnailPath: json['thumbnailPath'] as String?,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/broadcast.dart';
 import '../../domain/models/broadcast_list.dart';
+import '../../domain/models/message_type.dart';
 import '../../domain/repositories/broadcast_repository.dart';
 import 'mock_messaging_service.dart';
 import 'mock_contact_service.dart';
@@ -19,7 +20,6 @@ class MockBroadcastService implements BroadcastRepository {
   static const String _broadcastsPrefsKey = 'voltchat_broadcasts';
   bool _isInitialized = false;
 
-  // Added for testing purposes to reset the singleton state
   void clearStateForTest() {
     _lists.clear();
     _broadcasts.clear();
@@ -31,7 +31,6 @@ class MockBroadcastService implements BroadcastRepository {
 
     final prefs = await SharedPreferences.getInstance();
 
-    // Load lists
     final listsJson = prefs.getString(_listsPrefsKey);
     if (listsJson != null) {
       final List<dynamic> decoded = jsonDecode(listsJson);
@@ -41,7 +40,6 @@ class MockBroadcastService implements BroadcastRepository {
       }
     }
 
-    // Load broadcasts
     final broadcastsJson = prefs.getString(_broadcastsPrefsKey);
     if (broadcastsJson != null) {
       final List<dynamic> decoded = jsonDecode(broadcastsJson);
@@ -119,7 +117,6 @@ class MockBroadcastService implements BroadcastRepository {
   Future<void> deleteBroadcastList(String id) async {
     await _init();
     _lists.removeWhere((l) => l.id == id);
-    // Also remove associated broadcasts
     _broadcasts.removeWhere((b) => b.listId == id);
 
     await _saveLists();
@@ -143,25 +140,38 @@ class MockBroadcastService implements BroadcastRepository {
   }
 
   @override
-  Future<void> sendBroadcast(String listId, String content) async {
+  Future<void> sendBroadcast(
+    String listId,
+    String content, {
+    String messageType = 'text',
+    String? localPath,
+    String? fileName,
+    String? mimeType,
+    int? fileSize,
+    int? duration,
+  }) async {
     await _init();
 
-    // In a real app, this would also queue messages to individual recipients
-    // via a background service. Here we just save the broadcast record.
     final list = await getBroadcastListById(listId);
+    final sentAt = DateTime.now();
 
     final broadcast = Broadcast(
       id: 'b_${DateTime.now().millisecondsSinceEpoch}',
-      senderId: 'current_user', // Mock user id
+      senderId: 'current_user',
       listId: list.id,
       content: content,
-      sentAt: DateTime.now(),
+      sentAt: sentAt,
+      messageType: messageTypeFromString(messageType),
+      localPath: localPath,
+      fileName: fileName,
+      mimeType: mimeType,
+      fileSize: fileSize,
+      duration: duration,
     );
 
     _broadcasts.add(broadcast);
     await _saveBroadcasts();
 
-    // Also deliver independently to each individual recipient
     final messagingService = MockMessagingService();
     final contactService = MockContactService();
     final userService = MockUserService();
@@ -177,10 +187,20 @@ class MockBroadcastService implements BroadcastRepository {
           }
         }
       } catch (e) {
-        // Contact not found, use original recipientId
+        // Fallback to original recipientId
       }
 
-      await messagingService.sendMessageToParticipant(participantId, content);
+      await messagingService.sendMessageToParticipant(
+        participantId,
+        content,
+        messageType: messageType,
+        localPath: localPath,
+        fileName: fileName,
+        mimeType: mimeType,
+        fileSize: fileSize,
+        duration: duration,
+        sentAt: sentAt, // CRITICAL: Maintain exact sync timestamp
+      );
     }
   }
 }

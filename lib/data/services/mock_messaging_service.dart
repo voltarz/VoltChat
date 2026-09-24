@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/conversation.dart';
+import '../../domain/models/message_type.dart';
 import '../../domain/models/message.dart';
 import '../../domain/repositories/messaging_repository.dart';
 
@@ -110,7 +111,16 @@ class MockMessagingService implements MessagingRepository {
   }
 
   @override
-  Future<void> sendMessage(String conversationId, String content) async {
+  Future<void> sendMessage(
+    String conversationId,
+    String content, {
+    String messageType = 'text',
+    String? localPath,
+    String? fileName,
+    String? mimeType,
+    int? fileSize,
+    int? duration,
+  }) async {
     await _init();
     final now = DateTime.now();
     final newMessage = Message(
@@ -120,6 +130,12 @@ class MockMessagingService implements MessagingRepository {
       content: content,
       sentAt: now,
       isRead: true,
+      messageType: messageTypeFromString(messageType),
+      localPath: localPath,
+      fileName: fileName,
+      mimeType: mimeType,
+      fileSize: fileSize,
+      duration: duration,
     );
 
     if (!_messages.containsKey(conversationId)) {
@@ -148,7 +164,17 @@ class MockMessagingService implements MessagingRepository {
     await _saveConversations();
   }
 
-  Future<void> sendMessageToParticipant(String participantId, String content) async {
+  Future<void> sendMessageToParticipant(
+    String participantId,
+    String content, {
+    String messageType = 'text',
+    String? localPath,
+    String? fileName,
+    String? mimeType,
+    int? fileSize,
+    int? duration,
+    DateTime? sentAt,
+  }) async {
     await _init();
     final index = _conversations.indexWhere((c) => c.participantId == participantId);
     String conversationId;
@@ -157,13 +183,47 @@ class MockMessagingService implements MessagingRepository {
       _conversations.add(Conversation(
         id: conversationId,
         participantId: participantId,
-        lastUpdatedAt: DateTime.now(),
+        lastUpdatedAt: sentAt ?? DateTime.now(),
       ));
       await _saveConversations();
     } else {
       conversationId = _conversations[index].id;
     }
-    await sendMessage(conversationId, content);
+
+    // We duplicate the sendMessage logic slightly here to support custom sentAt for broadcasts
+    final now = sentAt ?? DateTime.now();
+    final newMessage = Message(
+      id: 'm_${now.millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch}',
+      conversationId: conversationId,
+      senderId: 'me',
+      content: content,
+      sentAt: now,
+      isRead: true,
+      messageType: messageTypeFromString(messageType),
+      localPath: localPath,
+      fileName: fileName,
+      mimeType: mimeType,
+      fileSize: fileSize,
+      duration: duration,
+    );
+
+    if (!_messages.containsKey(conversationId)) {
+      _messages[conversationId] = [];
+    }
+    _messages[conversationId]!.add(newMessage);
+
+    final convIndex = _conversations.indexWhere((c) => c.id == conversationId);
+    if (convIndex != -1) {
+      _conversations[convIndex] = Conversation(
+        id: conversationId,
+        participantId: _conversations[convIndex].participantId,
+        broadcastOriginId: _conversations[convIndex].broadcastOriginId,
+        lastUpdatedAt: now,
+      );
+    }
+
+    await _saveMessages();
+    await _saveConversations();
   }
 
   @override

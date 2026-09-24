@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:voltchat/data/services/mock_messaging_service.dart';
 import 'package:voltchat/data/services/mock_broadcast_service.dart';
+import 'package:voltchat/domain/models/message_type.dart';
 
 void main() {
   group('MockMessagingService Persistence and Delivery Tests', () {
@@ -30,6 +31,42 @@ void main() {
       expect(messages2.any((m) => m.content == 'Hello User A'), isTrue);
     });
 
+    test('Individual persistence: Send media message, reload, verify message exists', () async {
+      final service1 = MockMessagingService();
+      await service1.sendMessageToParticipant(
+        'user_media',
+        'Check this out',
+        messageType: 'image',
+        localPath: '/tmp/image.png',
+        fileName: 'image.png',
+        mimeType: 'image/png',
+        fileSize: 1024
+      );
+
+      final conversations1 = await service1.getConversations();
+      final convId = conversations1.firstWhere((c) => c.participantId == 'user_media').id;
+      final messages1 = await service1.getMessagesForConversation(convId);
+
+      final msg1 = messages1.firstWhere((m) => m.content == 'Check this out');
+      expect(msg1.messageType, MessageType.image);
+      expect(msg1.localPath, '/tmp/image.png');
+      expect(msg1.fileName, 'image.png');
+      expect(msg1.mimeType, 'image/png');
+      expect(msg1.fileSize, 1024);
+
+      // Reload/Reinitialize
+      MockMessagingService().clearStateForTest();
+      final service2 = MockMessagingService();
+
+      final conversations2 = await service2.getConversations();
+      final reloadedConvId = conversations2.firstWhere((c) => c.participantId == 'user_media').id;
+      final messages2 = await service2.getMessagesForConversation(reloadedConvId);
+
+      final msg2 = messages2.firstWhere((m) => m.content == 'Check this out');
+      expect(msg2.messageType, MessageType.image);
+      expect(msg2.localPath, '/tmp/image.png');
+    });
+
     test('Broadcast persistence: Send broadcast, reload, verify broadcast exists', () async {
       final broadcastService1 = MockBroadcastService();
       final list = await broadcastService1.createBroadcastList('My List', ['user_a', 'user_b']);
@@ -44,6 +81,36 @@ void main() {
 
       final broadcasts2 = await broadcastService2.getBroadcastsForList(list.id);
       expect(broadcasts2.any((b) => b.content == 'Hello Broadcast'), isTrue);
+    });
+
+    test('Broadcast media persistence and synchronized timestamp', () async {
+      final broadcastService1 = MockBroadcastService();
+      final messagingService = MockMessagingService();
+
+      final list = await broadcastService1.createBroadcastList('My List', ['user_a']);
+      await broadcastService1.sendBroadcast(
+        list.id,
+        '',
+        messageType: 'video',
+        localPath: '/tmp/video.mp4',
+        duration: 120
+      );
+
+      final broadcasts1 = await broadcastService1.getBroadcastsForList(list.id);
+      final broadcastRecord = broadcasts1.first;
+      expect(broadcastRecord.messageType, MessageType.video);
+      expect(broadcastRecord.duration, 120);
+
+      final convs = await messagingService.getConversations();
+      final conv = convs.firstWhere((c) => c.participantId == 'user_a');
+      final individualMessages = await messagingService.getMessagesForConversation(conv.id);
+      final deliveredRecord = individualMessages.first;
+
+      expect(deliveredRecord.messageType, MessageType.video);
+      expect(deliveredRecord.duration, 120);
+
+      // CRITICAL: Ensure Exact SentAt
+      expect(broadcastRecord.sentAt, deliveredRecord.sentAt);
     });
 
     test('Broadcast-to-individual delivery: 1 broadcast -> 3 independent deliveries (with persistence)', () async {
