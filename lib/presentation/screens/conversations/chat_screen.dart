@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../domain/models/message.dart';
 import '../../../data/services/mock_messaging_service.dart';
+import '../../../domain/models/contact.dart';
+import '../../../data/services/mock_contact_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -13,13 +15,16 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final MockMessagingService _messagingService = MockMessagingService();
+  final MockContactService _contactService = MockContactService();
   final TextEditingController _messageController = TextEditingController();
   List<Message> _messages = [];
   bool _isLoading = true;
+  Contact? _contact;
 
   @override
   void initState() {
     super.initState();
+    _loadContact();
     _loadMessages();
   }
 
@@ -27,6 +32,16 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadContact() async {
+    final id = widget.conversationId.startsWith('conv_')
+        ? widget.conversationId.substring(5)
+        : widget.conversationId;
+    final contact = await _contactService.getContactById(id);
+    if (mounted) {
+      setState(() => _contact = contact);
+    }
   }
 
   Future<void> _loadMessages() async {
@@ -66,7 +81,20 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.grey[800],
+              child: Text(
+                _contact?.displayName.substring(0, 1).toUpperCase() ?? 'U',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(_contact?.displayName ?? 'User'),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -80,7 +108,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       final message = _messages[index];
                       final isMe = message.senderId == 'me';
 
-                      return Align(
+                      // Date separator logic
+                      bool showDateSeparator = false;
+                      if (index == _messages.length - 1) {
+                        showDateSeparator = true;
+                      } else {
+                        final previousMessage = _messages[index + 1];
+                        if (message.sentAt.year != previousMessage.sentAt.year ||
+                            message.sentAt.month != previousMessage.sentAt.month ||
+                            message.sentAt.day != previousMessage.sentAt.day) {
+                          showDateSeparator = true;
+                        }
+                      }
+
+                      Widget messageWidget = Align(
                         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -123,6 +164,33 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                       );
+
+                      if (showDateSeparator) {
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[900],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _formatDate(message.sentAt),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            messageWidget,
+                          ],
+                        );
+                      }
+
+                      return messageWidget;
                     },
                   ),
           ),
@@ -156,5 +224,18 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0 && now.day == date.day) {
+      return 'Today';
+    } else if (difference.inDays == 1 || (difference.inDays == 0 && now.day != date.day)) {
+      return 'Yesterday';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }
