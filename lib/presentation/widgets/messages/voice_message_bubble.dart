@@ -117,10 +117,33 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           color: widget.isMe ? Theme.of(context).primaryColor : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(24),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            IconButton(
+            if (widget.message.replyToMessageId != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border(left: BorderSide(color: widget.isMe ? Colors.black54 : Theme.of(context).primaryColor, width: 3)),
+                ),
+                child: Text(
+                  widget.message.replyToMessageSnippet ?? 'Attachment',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: widget.isMe ? Colors.black87 : Colors.white70,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
               icon: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
                 color: widget.isMe ? Colors.black87 : Colors.white,
@@ -177,6 +200,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                 ],
               ),
             ),
+          ],
+        ),
           ],
         ),
       ),

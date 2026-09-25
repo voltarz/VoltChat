@@ -14,6 +14,8 @@ abstract class MessagingRepository {
     String? mimeType,
     int? fileSize,
     int? duration,
+    String? replyToMessageId,
+    String? replyToMessageSnippet,
   });
   Stream<Message> watchNewMessages();
 }

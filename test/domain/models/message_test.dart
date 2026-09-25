@@ -122,5 +122,26 @@ void main() {
       expect(parsedMsg.fileName, 'report.pdf');
       expect(parsedMsg.fileSize, 10240);
     });
+
+    test('Should serialize and deserialize reply metadata', () {
+      final msg = Message(
+        id: 'rep_1',
+        conversationId: 'c1',
+        senderId: 'me',
+        content: 'This is a reply to the original message',
+        sentAt: DateTime.parse('2023-11-20T12:00:00.000Z'),
+        isRead: true,
+        messageType: MessageType.text,
+        replyToMessageId: 'orig_1',
+        replyToMessageSnippet: 'Original message text',
+      );
+
+      final jsonMap = msg.toJson();
+      final decodedMsg = Message.fromJson(jsonMap);
+
+      expect(decodedMsg.replyToMessageId, 'orig_1');
+      expect(decodedMsg.replyToMessageSnippet, 'Original message text');
+      expect(decodedMsg.content, 'This is a reply to the original message');
+    });
   });
 }

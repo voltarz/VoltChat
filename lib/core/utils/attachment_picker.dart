@@ -38,6 +38,9 @@ class AttachmentPicker {
 
   static Future<AttachmentResult?> takePhoto() async {
     try {
+      if (Platform.isWindows || Platform.isLinux) {
+        return pickImageFromGallery();
+      }
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
       if (photo == null) return null;
 
@@ -72,6 +75,9 @@ class AttachmentPicker {
 
   static Future<AttachmentResult?> recordVideo() async {
     try {
+      if (Platform.isWindows || Platform.isLinux) {
+        return pickVideoFromGallery();
+      }
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
       if (video == null) return null;
 
