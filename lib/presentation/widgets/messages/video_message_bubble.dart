@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../../domain/models/message.dart';
+import '../../../data/services/local_media_storage_service.dart';
 
 class VideoMessageBubble extends StatefulWidget {
   final Message message;
@@ -21,9 +22,12 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
   void _openVideoPlayer(BuildContext context) {
     if (widget.message.localPath == null) return;
 
+    final resolvedPath = LocalMediaStorageService().getResolvedPath(widget.message.localPath!);
+    if (resolvedPath == null) return;
+
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => FullScreenVideoPlayer(localPath: widget.message.localPath!),
+        builder: (context) => FullScreenVideoPlayer(localPath: resolvedPath),
       ),
     );
   }
@@ -146,7 +150,13 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.file(File(widget.localPath))
+
+    // Attempt to resolve the path in case the app directory has changed (e.g., iOS restart)
+    // Though FullScreenVideoPlayer should receive the already resolved path from the bubble,
+    // this acts as a safe fallback.
+    final resolvedPath = LocalMediaStorageService().getResolvedPath(widget.localPath) ?? widget.localPath;
+
+    _controller = VideoPlayerController.file(File(resolvedPath))
       ..initialize().then((_) {
         if (!mounted) return;
         setState(() {

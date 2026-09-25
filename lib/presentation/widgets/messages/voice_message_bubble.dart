@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../domain/models/message.dart';
+import '../../../data/services/local_media_storage_service.dart';
 
 class VoiceMessageBubble extends StatefulWidget {
   final Message message;
@@ -43,7 +44,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   void _setupAudioPlayer() {
     if (widget.message.localPath == null) return;
 
-    _audioPlayer.setSourceDeviceFile(widget.message.localPath!);
+    final resolvedPath = LocalMediaStorageService().getResolvedPath(widget.message.localPath!);
+    if (resolvedPath == null) return;
+
+    _audioPlayer.setSourceDeviceFile(resolvedPath);
 
     _durationSubscription = _audioPlayer.onDurationChanged.listen((duration) {
       if (mounted) setState(() => _duration = duration);
@@ -84,10 +88,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   void _togglePlayPause() async {
     if (widget.message.localPath == null) return;
 
+    final resolvedPath = LocalMediaStorageService().getResolvedPath(widget.message.localPath!);
+    if (resolvedPath == null) return;
+
     if (_isPlaying) {
       await _audioPlayer.pause();
     } else {
-      await _audioPlayer.play(DeviceFileSource(widget.message.localPath!));
+      await _audioPlayer.play(DeviceFileSource(resolvedPath));
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../domain/models/message.dart';
+import '../../../data/services/local_media_storage_service.dart';
 
 class ImageMessageBubble extends StatelessWidget {
   final Message message;
@@ -15,6 +16,9 @@ class ImageMessageBubble extends StatelessWidget {
   void _showFullScreenImage(BuildContext context) {
     if (message.localPath == null) return;
 
+    final resolvedPath = LocalMediaStorageService().getResolvedPath(message.localPath!);
+    if (resolvedPath == null) return;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
@@ -26,7 +30,7 @@ class ImageMessageBubble extends StatelessWidget {
           body: Center(
             child: InteractiveViewer(
               child: Image.file(
-                File(message.localPath!),
+                File(resolvedPath),
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) =>
                     const Icon(Icons.broken_image, size: 100, color: Colors.white54),
@@ -40,7 +44,8 @@ class ImageMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = message.localPath != null && message.localPath!.isNotEmpty;
+    final resolvedPath = LocalMediaStorageService().getResolvedPath(message.localPath);
+    final hasImage = resolvedPath != null && resolvedPath.isNotEmpty;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -60,7 +65,7 @@ class ImageMessageBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: hasImage
                     ? Image.file(
-                        File(message.localPath!),
+                        File(resolvedPath),
                         width: 250,
                         height: 250,
                         fit: BoxFit.cover,

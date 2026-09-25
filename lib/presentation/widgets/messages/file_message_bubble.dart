@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../domain/models/message.dart';
+import '../../../data/services/local_media_storage_service.dart';
 
 class FileMessageBubble extends StatelessWidget {
   final Message message;
@@ -14,7 +15,10 @@ class FileMessageBubble extends StatelessWidget {
 
   void _openFile() {
     if (message.localPath != null) {
-      OpenFilex.open(message.localPath!);
+      final resolvedPath = LocalMediaStorageService().getResolvedPath(message.localPath!);
+      if (resolvedPath != null) {
+        OpenFilex.open(resolvedPath);
+      }
     }
   }
 

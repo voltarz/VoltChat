@@ -215,6 +215,14 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
                   if (result != null) _showMediaPreview(result);
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.mic),
+                title: const Text('Record Voice / Voice Note'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  _toggleVoiceRecord();
+                },
+              ),
             ],
           ),
         );

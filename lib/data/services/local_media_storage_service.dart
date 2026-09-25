@@ -8,14 +8,34 @@ class LocalMediaStorageService {
   factory LocalMediaStorageService() => _instance;
 
   final _uuid = const Uuid();
+  String? _cachedMediaDirPath;
 
-  Future<String> _getAppDir() async {
+  Future<void> init() async {
+    if (_cachedMediaDirPath != null) return;
     final directory = await getApplicationDocumentsDirectory();
     final mediaDir = Directory('${directory.path}/voltchat_media');
     if (!await mediaDir.exists()) {
       await mediaDir.create(recursive: true);
     }
-    return mediaDir.path;
+    _cachedMediaDirPath = mediaDir.path;
+  }
+
+  Future<String> _getAppDir() async {
+    if (_cachedMediaDirPath == null) {
+      await init();
+    }
+    return _cachedMediaDirPath!;
+  }
+
+  String? getResolvedPath(String? absolutePath) {
+    if (absolutePath == null || absolutePath.isEmpty) return null;
+    if (_cachedMediaDirPath == null) return absolutePath; // Fallback, shouldn't happen if initialized
+
+    final uri = Uri.file(absolutePath);
+    final fileName = uri.pathSegments.last;
+
+    // We construct the path manually to support both formats.
+    return '$_cachedMediaDirPath/$fileName';
   }
 
   String _sanitizeFileName(String fileName) {
@@ -40,13 +60,15 @@ class LocalMediaStorageService {
 
   Future<bool> fileExists(String localPath) async {
     if (localPath.isEmpty) return false;
-    final file = File(localPath);
+    final resolvedPath = getResolvedPath(localPath) ?? localPath;
+    final file = File(resolvedPath);
     return await file.exists();
   }
 
   Future<void> deleteMediaFile(String localPath) async {
     if (localPath.isEmpty) return;
-    final file = File(localPath);
+    final resolvedPath = getResolvedPath(localPath) ?? localPath;
+    final file = File(resolvedPath);
     if (await file.exists()) {
       await file.delete();
     }

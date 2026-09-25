@@ -75,5 +75,52 @@ void main() {
       expect(parsedMsg.duration, 35);
       expect(parsedMsg.content, '');
     });
+
+    test('Should serialize and deserialize a video message', () {
+      final msg = Message(
+        id: 'video_msg',
+        conversationId: 'conv1',
+        senderId: 'userB',
+        content: 'Check this out',
+        sentAt: DateTime(2025, 1, 1, 12, 10),
+        messageType: MessageType.video,
+        localPath: '/storage/emulated/0/Movies/vid.mp4',
+        duration: 120,
+      );
+
+      final json = msg.toJson();
+      expect(json['messageType'], 'video');
+      expect(json['duration'], 120);
+
+      final parsedMsg = Message.fromJson(json);
+      expect(parsedMsg.messageType, MessageType.video);
+      expect(parsedMsg.localPath, '/storage/emulated/0/Movies/vid.mp4');
+      expect(parsedMsg.duration, 120);
+    });
+
+    test('Should serialize and deserialize a document message', () {
+      final msg = Message(
+        id: 'doc_msg',
+        conversationId: 'conv1',
+        senderId: 'userB',
+        content: 'Here is the report',
+        sentAt: DateTime(2025, 1, 1, 12, 10),
+        messageType: MessageType.file,
+        localPath: '/storage/emulated/0/Documents/report.pdf',
+        fileName: 'report.pdf',
+        fileSize: 10240,
+      );
+
+      final json = msg.toJson();
+      expect(json['messageType'], 'file');
+      expect(json['fileName'], 'report.pdf');
+      expect(json['fileSize'], 10240);
+
+      final parsedMsg = Message.fromJson(json);
+      expect(parsedMsg.messageType, MessageType.file);
+      expect(parsedMsg.localPath, '/storage/emulated/0/Documents/report.pdf');
+      expect(parsedMsg.fileName, 'report.pdf');
+      expect(parsedMsg.fileSize, 10240);
+    });
   });
 }
