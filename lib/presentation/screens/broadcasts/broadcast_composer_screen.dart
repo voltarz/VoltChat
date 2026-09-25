@@ -258,13 +258,12 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
       if (path != null) {
         final file = File(path);
         if (await file.exists()) {
-          bool send = false;
           final duration = DateTime.now().difference(_recordingStartTime!).inSeconds;
 
           if (!mounted) return;
-          await showDialog(
+          final send = await showDialog<bool>(
             context: context,
-            builder: (context) {
+            builder: (dialogContext) {
               return AlertDialog(
                 title: const Text('Review Voice Note'),
                 content: Text('Broadcast voice note recorded (${duration}s). Send it?'),
@@ -272,21 +271,20 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
                   TextButton(
                     onPressed: () {
                       file.delete();
-                      Navigator.pop(context);
+                      Navigator.pop(dialogContext, false);
                     },
                     child: const Text('Discard'),
                   ),
                   TextButton(
                     onPressed: () {
-                      send = true;
-                      Navigator.pop(context);
+                      Navigator.pop(dialogContext, true);
                     },
                     child: const Text('Send'),
                   ),
                 ],
               );
             },
-          );
+          ) ?? false;
 
           if (send) {
             final savedPath = await _mediaStorage.saveMediaFile(file, 'voice_broadcast_${DateTime.now().millisecondsSinceEpoch}.m4a');

@@ -22,12 +22,9 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
   void _openVideoPlayer(BuildContext context) {
     if (widget.message.localPath == null) return;
 
-    final resolvedPath = LocalMediaStorageService().getResolvedPath(widget.message.localPath!);
-    if (resolvedPath == null) return;
-
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => FullScreenVideoPlayer(localPath: resolvedPath),
+        builder: (context) => FullScreenVideoPlayer(localPath: widget.message.localPath!),
       ),
     );
   }

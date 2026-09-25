@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-// Completely bypass FilePicker definition issues in tests
-import 'package:file_picker/file_picker.dart' as fp;
+import 'package:file_picker/file_picker.dart';
 
 class AttachmentResult {
   final File file;
@@ -90,14 +89,13 @@ class AttachmentPicker {
 
   static Future<AttachmentResult?> pickFile() async {
     try {
-      // Use dynamic to avoid strict type checks that fail in some test envs
-      dynamic result = await fp.FilePickerPlatform.instance.pickFiles();
-      if (result != null && result.files.isNotEmpty && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
+      final List<PlatformFile> result = await FilePicker.pickFiles();
+      if (result.isNotEmpty && result.single.path != null) {
+        final file = File(result.single.path!);
         return AttachmentResult(
           file: file,
-          originalName: result.files.single.name,
-          size: result.files.single.size,
+          originalName: result.single.name,
+          size: await file.length(),
           type: 'file',
         );
       }
