@@ -43,6 +43,24 @@ void main() {
         fileSize: 1024
       );
 
+      await service1.sendMessage(
+        'conv_u1',
+        '',
+        messageType: 'file',
+        localPath: '/tmp/doc.pdf',
+        fileName: 'doc.pdf',
+        fileSize: 5000,
+      );
+
+      await service1.sendMessage(
+        'conv_u1',
+        '',
+        messageType: 'audio',
+        localPath: '/tmp/voice.m4a',
+        fileName: 'voice.m4a',
+        duration: 45,
+      );
+
       final conversations1 = await service1.getConversations();
       final convId = conversations1.firstWhere((c) => c.participantId == 'user_media').id;
       final messages1 = await service1.getMessagesForConversation(convId);
@@ -65,6 +83,15 @@ void main() {
       final msg2 = messages2.firstWhere((m) => m.content == 'Check this out');
       expect(msg2.messageType, MessageType.image);
       expect(msg2.localPath, '/tmp/image.png');
+
+      final individualMessages = await service2.getMessagesForConversation('conv_u1');
+      final docMsg = individualMessages.firstWhere((m) => m.fileName == 'doc.pdf');
+      expect(docMsg.messageType, MessageType.file);
+      expect(docMsg.localPath, '/tmp/doc.pdf');
+
+      final voiceMsg = individualMessages.firstWhere((m) => m.fileName == 'voice.m4a');
+      expect(voiceMsg.messageType, MessageType.audio);
+      expect(voiceMsg.duration, 45);
     });
 
     test('Broadcast persistence: Send broadcast, reload, verify broadcast exists', () async {
