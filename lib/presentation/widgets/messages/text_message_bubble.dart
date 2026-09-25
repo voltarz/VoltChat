@@ -25,6 +25,26 @@ class TextMessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
+            if (message.replyToMessageId != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border(left: BorderSide(color: isMe ? Colors.black54 : Theme.of(context).primaryColor, width: 3)),
+                ),
+                child: Text(
+                  message.replyToMessageSnippet ?? 'Attachment',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isMe ? Colors.black87 : Colors.white70,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
             Text(
               message.content,
               style: TextStyle(

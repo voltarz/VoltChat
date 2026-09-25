@@ -194,6 +194,46 @@ void main() {
       expect(messagesY.any((m) => m.content == 'Secret message'), isTrue);
     });
 
+    test('Reply and Forward handling correctly maps metadata', () async {
+      final messagingService = MockMessagingService();
+
+      await messagingService.sendMessage(
+        'conv_test_u1',
+        'Original text',
+      );
+
+      final msgs = await messagingService.getMessagesForConversation('conv_test_u1');
+      final msg = msgs.firstWhere((m) => m.content == 'Original text');
+
+      await messagingService.sendMessage(
+        'conv_test_u1',
+        'This is a reply',
+        replyToMessageId: msg.id,
+        replyToMessageSnippet: msg.content,
+      );
+
+      final msgsAfterReply = await messagingService.getMessagesForConversation('conv_test_u1');
+      final replyMsg = msgsAfterReply.last;
+
+      expect(replyMsg.replyToMessageId, msg.id);
+      expect(replyMsg.replyToMessageSnippet, 'Original text');
+
+      await messagingService.sendMessage(
+        'conv_test_u2',
+        msg.content,
+        messageType: messageTypeToString(msg.messageType),
+        localPath: msg.localPath,
+        fileName: msg.fileName,
+        mimeType: msg.mimeType,
+        fileSize: msg.fileSize,
+        duration: msg.duration,
+      );
+
+      final forwardedMsgs = await messagingService.getMessagesForConversation('conv_test_u2');
+      final forwardedMsg = forwardedMsgs.last;
+      expect(forwardedMsg.content, 'Original text');
+    });
+
     test('Replies: Reply exists only in the correct individual conversation', () async {
       final broadcastService = MockBroadcastService();
       final messagingService = MockMessagingService();

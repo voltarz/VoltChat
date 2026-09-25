@@ -120,6 +120,8 @@ class MockMessagingService implements MessagingRepository {
     String? mimeType,
     int? fileSize,
     int? duration,
+    String? replyToMessageId,
+    String? replyToMessageSnippet,
   }) async {
     await _init();
     final now = DateTime.now();
@@ -136,6 +138,8 @@ class MockMessagingService implements MessagingRepository {
       mimeType: mimeType,
       fileSize: fileSize,
       duration: duration,
+      replyToMessageId: replyToMessageId,
+      replyToMessageSnippet: replyToMessageSnippet,
     );
 
     if (!_messages.containsKey(conversationId)) {
@@ -174,6 +178,8 @@ class MockMessagingService implements MessagingRepository {
     int? fileSize,
     int? duration,
     DateTime? sentAt,
+    String? replyToMessageId,
+    String? replyToMessageSnippet,
   }) async {
     await _init();
     final index = _conversations.indexWhere((c) => c.participantId == participantId);
@@ -205,6 +211,8 @@ class MockMessagingService implements MessagingRepository {
       mimeType: mimeType,
       fileSize: fileSize,
       duration: duration,
+      replyToMessageId: replyToMessageId,
+      replyToMessageSnippet: replyToMessageSnippet,
     );
 
     if (!_messages.containsKey(conversationId)) {

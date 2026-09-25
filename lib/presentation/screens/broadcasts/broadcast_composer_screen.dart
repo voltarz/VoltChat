@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/services/mock_broadcast_service.dart';
 import '../../../domain/models/broadcast.dart';
@@ -230,13 +231,30 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
     );
   }
 
+  Future<int?> _getVideoDuration(File file) async {
+    try {
+      final controller = VideoPlayerController.file(file);
+      await controller.initialize();
+      final duration = controller.value.duration.inSeconds;
+      await controller.dispose();
+      return duration;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> _processAttachment(AttachmentResult result) async {
     final savedPath = await _mediaStorage.saveMediaFile(result.file, result.originalName);
 
     MessageType type = MessageType.text;
+    int? duration;
+
     if (result.type == 'image') type = MessageType.image;
-    if (result.type == 'video') type = MessageType.video;
     if (result.type == 'file') type = MessageType.file;
+    if (result.type == 'video') {
+      type = MessageType.video;
+      duration = await _getVideoDuration(result.file);
+    }
 
     _sendMessage(
       contentOverride: '',
@@ -244,6 +262,7 @@ class _BroadcastComposerScreenState extends State<BroadcastComposerScreen> {
       localPath: savedPath,
       fileName: result.originalName,
       fileSize: result.size,
+      duration: duration,
     );
   }
 

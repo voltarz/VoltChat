@@ -17,6 +17,9 @@ class Message {
   final int? duration;
   final String? thumbnailPath;
 
+  final String? replyToMessageId;
+  final String? replyToMessageSnippet;
+
   Message({
     required this.id,
     required this.conversationId,
@@ -31,6 +34,8 @@ class Message {
     this.fileSize,
     this.duration,
     this.thumbnailPath,
+    this.replyToMessageId,
+    this.replyToMessageSnippet,
   });
 
   Map<String, dynamic> toJson() {
@@ -48,6 +53,8 @@ class Message {
       if (fileSize != null) 'fileSize': fileSize,
       if (duration != null) 'duration': duration,
       if (thumbnailPath != null) 'thumbnailPath': thumbnailPath,
+      if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
+      if (replyToMessageSnippet != null) 'replyToMessageSnippet': replyToMessageSnippet,
     };
   }
 
@@ -66,6 +73,8 @@ class Message {
       fileSize: json['fileSize'] as int?,
       duration: json['duration'] as int?,
       thumbnailPath: json['thumbnailPath'] as String?,
+      replyToMessageId: json['replyToMessageId'] as String?,
+      replyToMessageSnippet: json['replyToMessageSnippet'] as String?,
     );
   }
 }
